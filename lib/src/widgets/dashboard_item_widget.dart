@@ -1,4 +1,24 @@
-part of '../dashboard_base.dart';
+part of dashboard;
+
+class DashboardItemWidget<T extends DashboardItem> extends InheritedWidget {
+  const DashboardItemWidget(
+      {required this.item, required super.child, super.key});
+
+  final DashboardItem item;
+
+  static DashboardItemWidget<T> of<T extends DashboardItem>(
+      BuildContext context) {
+    final DashboardItemWidget? result =
+        context.dependOnInheritedWidgetOfExactType<DashboardItemWidget>();
+    assert(result != null, 'No DashboardItemWidget found in context');
+    return result! as DashboardItemWidget<T>;
+  }
+
+  @override
+  bool updateShouldNotify(covariant DashboardItemWidget oldWidget) {
+    return oldWidget.item.identifier != item.identifier;
+  }
+}
 
 class _DashboardItemWidget extends StatefulWidget {
   const _DashboardItemWidget(
@@ -125,8 +145,6 @@ class _DashboardItemWidgetState extends State<_DashboardItemWidget> with TickerP
   double startScrollOffset = 0;
 
   _ItemCurrentLayout get l => widget.itemCurrentLayout;
-
-  //late BoxConstraints c;
 
   double get slotEdge => widget.layoutController.slotEdge;
 

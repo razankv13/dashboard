@@ -46,6 +46,7 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
       this.textDirection = TextDirection.ltr,
       this.errorPlaceholder,
       this.loadingPlaceholder,
+      this.emptyPlaceholder,
       this.absorbPointer = true,
       this.animateEverytime = true,
       this.itemGlobalPosition,
@@ -113,6 +114,12 @@ class Dashboard<T extends DashboardItem> extends StatefulWidget {
   ///
   /// Default [loadingPlaceholder] is a centered circular process indicator.
   final Widget? loadingPlaceholder;
+
+  /// If the function don't have any data then it should display something
+  /// In empty data, [Dashboard] shows [emptyPlaceholder].
+  ///
+  /// Default [emptyPlaceholder] is a sizedBox means just empty space.
+  final Widget? emptyPlaceholder;
 
   /// If the [dashboardItemController] uses a [DashboardItemStorageDelegate],
   /// the loading of the items initially is done with a FutureOr function.
@@ -246,6 +253,14 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   bool _reloading = false;
 
+  void _setOnNextFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
   ///
   void _setNewOffset(ViewportOffset o, BoxConstraints constraints) {
     /// check slot count
@@ -271,6 +286,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           axis: Axis.vertical,
           itemController: widget.dashboardItemController,
           slotCount: widget.slotCount);
+      _setOnNextFrame();
     }
 
     if (!_layoutController._isAttached) {
@@ -282,6 +298,7 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
           axis: Axis.vertical,
           itemController: widget.dashboardItemController,
           slotCount: widget.slotCount);
+      _setOnNextFrame();
     }
 
     double h;
@@ -297,7 +314,9 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     }
 
     _layoutController._setSizes(_layoutController._viewportDelegate.resolvedConstrains, h);
+
     _offset = o;
+
     offset.applyViewportDimension(_layoutController._viewportDelegate.constraints.maxHeight);
 
     var maxIndex = (_layoutController._endsTree.lastKey() ?? 0);
@@ -310,10 +329,8 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
     try {
       offset.applyContentDimensions(
           0, _maxExtend.clamp(0, double.maxFinite) + widget.padding.vertical);
-    // ignore: empty_catches
-    } catch (e) {
-      
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   ///
@@ -321,6 +338,8 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
 
   ///
   final GlobalKey<_DashboardStackState<T>> _stateKey = GlobalKey<_DashboardStackState<T>>();
+
+  final GlobalKey<ScrollableState> _scrollableKey = GlobalKey<ScrollableState>();
 
   bool scrollable = true;
 
@@ -388,42 +407,50 @@ class _DashboardState<T extends DashboardItem> extends State<Dashboard<T>>
               );
         }
       }
+      if (widget.dashboardItemController._items.isEmpty) {
+        return widget.dashboardItemController.isEditing
+            ? dashboardWidget(constrains)
+            : widget.emptyPlaceholder ?? const SizedBox();
+      }
 
-      return Scrollable(
-          physics: scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
-          controller: widget.scrollController,
-          semanticChildCount: widget.dashboardItemController._items.length,
-          dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
-          scrollBehavior: widget.scrollBehavior,
-          viewportBuilder: (c, o) {
-            if (!_reloading) _setNewOffset(o, constrains);
-            SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-              _stateKey.currentState?._listenOffset(o);
-            });
-            _building = false;
-            return _DashboardStack<T>(
-              itemStyle: widget.itemStyle,
-              shouldCalculateNewDimensions: () {
-                _setNewOffset(o, constrains);
-              },
-              onScrollStateChange: (st) {
-                if (mounted) {
-                  setState(() {
-                    scrollable = st;
-                  });
-                }
-              },
-              maxScrollOffset: _maxExtend,
-              editModeSettings: widget.editModeSettings,
-              cacheExtend: widget.cacheExtend,
-              key: _stateKey,
-              itemBuilder: widget.itemBuilder,
-              dashboardController: _layoutController,
-              offset: offset,
-              itemGlobalPosition: widget.itemGlobalPosition,
-            );
-          });
+      return dashboardWidget(constrains);
     });
+  }
+
+  Widget dashboardWidget(BoxConstraints constrains) {
+    return Scrollable(
+        physics: scrollable ? widget.physics : const NeverScrollableScrollPhysics(),
+        key: _scrollableKey,
+        controller: widget.scrollController,
+        semanticChildCount: widget.dashboardItemController._items.length,
+        dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
+        scrollBehavior: widget.scrollBehavior,
+        viewportBuilder: (c, o) {
+          if (!_reloading) _setNewOffset(o, constrains);
+          WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+            _stateKey.currentState?._listenOffset(o);
+          });
+          _building = false;
+          return _DashboardStack<T>(
+            itemStyle: widget.itemStyle,
+            shouldCalculateNewDimensions: () {
+              _setNewOffset(o, constrains);
+            },
+            onScrollStateChange: (st) {
+              setState(() {
+                scrollable = st;
+              });
+            },
+            maxScrollOffset: _maxExtend,
+            editModeSettings: widget.editModeSettings,
+            cacheExtend: widget.cacheExtend,
+            key: _stateKey,
+            itemBuilder: widget.itemBuilder,
+            dashboardController: _layoutController,
+            offset: offset,
+            itemGlobalPosition: widget.itemGlobalPosition,
+          );
+        });
   }
 }
 

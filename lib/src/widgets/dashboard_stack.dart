@@ -406,12 +406,12 @@ class _DashboardStackState<T extends DashboardItem> extends State<_DashboardStac
 
       if (_editingResize) {
         var scrollDifference = pixels - _startScrollPixels!;
-        var difs = <String>{};
+        var differences = <String>{};
         var resizeMoveResult = _editing!._resizeMove(
             holdDirections: _holdDirections!,
             local: local,
             onChange: (s) {
-              difs.add(s);
+              differences.add(s);
             },
             start: _moveStartOffset!,
             scrollDifference: scrollDifference);
@@ -420,7 +420,7 @@ class _DashboardStackState<T extends DashboardItem> extends State<_DashboardStac
           setState(() {
             _moveStartOffset = _moveStartOffset! + resizeMoveResult.startDifference;
             _widgetsMap.remove(_editing!.id);
-            for (var r in difs) {
+            for (var r in differences) {
               _widgetsMap.remove(r);
             }
             if (_editing!._endIndex > (e)) {
