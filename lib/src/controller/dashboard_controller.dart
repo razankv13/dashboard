@@ -46,11 +46,11 @@ class DashboardItemController<T extends DashboardItem> with ChangeNotifier {
   /// The [isEditing] does not have to be true to add or delete items.
   ///
   /// Use as setter to change [isEditing] value.
-  bool get isEditing => _layoutController!.isEditing;
+  bool get isEditing => _layoutController?.isEditing ?? false;
 
   /// Change editing status.
   set isEditing(bool value) {
-    _layoutController!.isEditing = value;
+    _layoutController?.isEditing = value;
   }
 
   /// Add new item to Dashboard.
